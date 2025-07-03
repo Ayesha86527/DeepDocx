@@ -1,37 +1,39 @@
-# Importing necessary modules
+#Importing necessary modules
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 import faiss
 from groq import Groq
+from google.colab import userdata
+import pypdf
 import streamlit as st
-import os
+import random
+import time
 
-# Load embedding model
 embedding_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
-# Get API key from Streamlit secrets
-Groq_API = st.secrets["Grok_Api_Key"]
-client = Groq(api_key=Groq_API)
+client = Groq(
+    api_key=userdata.get('Groq_Api_Key')
+)
 
-# --- Helper Functions ---
-
-def document_loader(uploaded_doc):
-    with open(uploaded_doc.name, "wb") as f:
-        f.write(uploaded_doc.read())
-    loader = PyPDFLoader(uploaded_doc.name)
+def document_loader(document):
+    pdf_filename = list(document.keys())[0]
+    loader = PyPDFLoader(pdf_filename)
     pages = loader.load_and_split()
     return pages
 
 def split_text():
-    return RecursiveCharacterTextSplitter(
+    text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
         length_function=len,
     )
+    return text_splitter
 
-def create_chunks(pages, text_splitter):
-    all_page_text = "".join(page.page_content for page in pages)
+def create_chunks(pages,text_splitter):
+    all_page_text = ""
+    for page in pages:
+        all_page_text += page.page_content
     texts = text_splitter.create_documents([all_page_text])
     return texts
 
@@ -51,27 +53,16 @@ def retrieval(index, user_prompt, text_contents):
     k = 6
     distances, indices = index.search(query_embedding, k)
     retrieved_info = [text_contents[idx] for idx in indices[0]]
-    return "\n".join(retrieved_info)
-
-# --- Chat Completion Functions ---
+    context = "\\n".join(retrieved_info)
+    return context
 
 def chat_completion_SRS_Analysis(context, user_input):
     prompt = f"""
-You are acting as a senior software analyst specializing in software requirements specification (SRS) documents.
-
-Your task is to analyze the uploaded SRS document and help users by:
-1. Listing **functional** and **non-functional** requirements.
-2. Extracting **modules**, **user roles**, **data flows**.
-3. Explaining **technical terms** or acronyms.
-4. Pointing out **incomplete or ambiguous** parts.
-5. Summarizing the **scope and objective**.
-6. Offering implementation or testing advice.
-
-Only refer to the document context. Do not assume or invent.
-
-**Document Context:**
-{context}
-"""
+    You are acting as a senior software analyst specializing in software requirements specification (SRS) documents.
+    ...
+    **Document Context:**
+    {context}
+    """
     chat_completion = client.chat.completions.create(
         messages=[
             {"role": "system", "content": prompt},
@@ -79,139 +70,50 @@ Only refer to the document context. Do not assume or invent.
         ],
         model="llama-3.3-70b-versatile",
     )
-    return chat_completion.choices[0].message.content
+    st.write(chat_completion.choices[0].message.content)
 
-def chat_completion_Research_Analysis(context, user_input):
-    prompt = f"""
-You are a research assistant specializing in technical literature.
+# (Repeat the same structure for other functions...)
 
-You must:
-- Extract objectives, key findings, and methods
-- Explain terms or abbreviations
-- Point out assumptions or gaps
-- Summarize conclusions and future work
+# 1. Title
+st.title("DeepDocx")
 
-Use only this context:
-{context}
-"""
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_input}
-        ],
-        model="llama-3.3-70b-versatile",
-    )
-    return chat_completion.choices[0].message.content
+# 2. File Upload
+uploaded_doc = st.file_uploader("Upload your document", type=["pdf", "docx", "txt"])
 
-def chat_completion_GRC_Analysis(context, user_input):
-    prompt = f"""
-You are a compliance specialist analyzing legal or regulatory documents.
-
-Extract and explain:
-- Responsibilities, restrictions
-- Key terms, penalties
-- Risks or ambiguities
-- Practical advice
-
-Only use this context:
-{context}
-"""
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_input}
-        ],
-        model="llama-3.3-70b-versatile",
-    )
-    return chat_completion.choices[0].message.content
-
-def chat_completion_Whitepaper_Analysis(context, user_input):
-    prompt = f"""
-You are a strategist analyzing whitepapers.
-
-Summarize:
-- Problem and solution
-- Architecture or technology
-- Financial models or tokens
-- Adoption or roadmap
-
-Stick to context:
-{context}
-"""
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_input}
-        ],
-        model="llama-3.3-70b-versatile",
-    )
-    return chat_completion.choices[0].message.content
-
-def chat_completion_project_report_Analysis(context, user_input):
-    prompt = f"""
-You are a senior project analyst.
-
-Summarize:
-- Milestones, KPIs
-- Risks and delays
-- Timeline and assignments
-- Improvement recommendations
-
-Context:
-{context}
-"""
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_input}
-        ],
-        model="llama-3.3-70b-versatile",
-    )
-    return chat_completion.choices[0].message.content
-
-# --- Streamlit App ---
-
-st.title("📄 DeepDocx – Document Intelligence App")
-
-uploaded_doc = st.file_uploader("📤 Upload your document", type=["pdf", "docx", "txt"])
-
+# 3. Session Setup
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Show chat history
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-# Chat input
-if prompt := st.chat_input("Hey there! Upload your document and ask me anything about it."):
-
+# 4. Chat Input
+if prompt := st.chat_input("Hey there! Upload your document and I am here to analyze."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Document processing
     if uploaded_doc:
-        pages = document_loader(uploaded_doc)
-        text_splitter = split_text()
-        chunks = create_chunks(pages, text_splitter)
-        embeddings, text_contents = create_embeddings(chunks)
-        vector_store = create_vector_store(embeddings)
-        context = retrieval(vector_store, prompt, text_contents)
+        pages=document_loader(uploaded_doc)
+        text_splitter=split_text()
+        chunks=create_chunks(pages,text_splitter)
+        embeddings,text_contents=create_embeddings(chunks)
+        vector_store=create_vector_store(embeddings)
+        context=retrieval(vector_store, prompt, text_contents)
 
         mode = st.selectbox("Choose analysis mode:", (
             "SRS Analysis", "Research Paper", "GRC Document", "Whitepaper", "Project Report"))
 
+        # Generate and display assistant response
         if mode == "SRS Analysis":
             response = chat_completion_SRS_Analysis(context, prompt)
         elif mode == "Research Paper":
             response = chat_completion_Research_Analysis(context, prompt)
         elif mode == "GRC Document":
-            response = chat_completion_GRC_Analysis(context, prompt)
+            chat_completion_GRC_Analysis(context, prompt)
         elif mode == "Whitepaper":
-            response = chat_completion_Whitepaper_Analysis(context, prompt)
+            chat_completion_Whitepaper_Analysis(context, prompt)
         elif mode == "Project Report":
-            response = chat_completion_project_report_Analysis(context, prompt)
+            chat_completion_project_report_Analysis(context, prompt)
 
-        st.session_state.messages.append({"role": "assistant", "content": response})
         with st.chat_message("assistant"):
             st.markdown(response)
+        st.session_state.messages.append({"role": "assistant", "content": response})
