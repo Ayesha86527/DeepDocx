@@ -4,7 +4,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 import faiss
 from groq import Groq
-from google.colab import userdata
 import pypdf
 import streamlit as st
 import random
