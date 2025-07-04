@@ -8,6 +8,7 @@ import pypdf
 import streamlit as st
 import random
 import time
+import tempfile
 
 embedding_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
@@ -18,8 +19,11 @@ client = Groq(api_key=Grok_Api_Key)
 
 
 def document_loader(document):
-    pdf_filename = list(document.keys())[0]
-    loader = PyPDFLoader(pdf_filename)
+    # Save the uploaded file temporarily
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+        tmp_file.write(document.read())
+        tmp_path = tmp_file.name
+    loader = PyPDFLoader(tmp_path)
     pages = loader.load_and_split()
     return pages
 
