@@ -13,8 +13,8 @@ embedding_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
 
 # Get API key from Streamlit secrets
-Groq_API = st.secrets["Grok_Api_Key"]
-client = Groq(api_key=Groq_API)
+Grok_Api_Key = st.secrets["GROQ_API_KEY"]
+client = Groq(api_key=Grok_Api_Key)
 
 
 def document_loader(document):
