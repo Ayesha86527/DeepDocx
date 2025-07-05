@@ -5,4 +5,4 @@ sentence-transformers==2.2.2
 faiss-cpu==1.7.4
 pypdf==3.17.4
 groq
-torch==2.0.1
+torch==2.7.1
