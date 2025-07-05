@@ -1,7 +1,8 @@
-langchain
-langchain-community
-pypdf
-sentence-transformers
-faiss-cpu
+streamlit==1.34.0
+langchain==0.1.14
+langchain-community==0.0.32
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+pypdf==3.17.4
 groq
-streamlit
+torch==2.0.1
