@@ -186,46 +186,65 @@ Context:
     st.write(chat_completion.choices[0].message.content)
 
 
-# 1. Title
+# Title
 st.title("📄 DeepDocx - Your Intelligent Document Analyzer")
 
-# 2. File Upload
-uploaded_doc = st.file_uploader("Upload your document", type=["pdf", "docx", "txt"])
+# File Upload
+uploaded_doc = st.file_uploader("📤 Upload your document", type=["pdf", "docx", "txt"])
 
-# 3. Session Setup
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 
-# 4. Chat Input
-if prompt := st.chat_input("Hey there! Upload your document and I am here to analyze."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+# Persist session state
+if "mode_selected" not in st.session_state:
+    st.session_state.mode_selected = False
+if "mode" not in st.session_state:
+    st.session_state.mode = None
+if "vector_store" not in st.session_state:
+    st.session_state.vector_store = None
+if "text_contents" not in st.session_state:
+    st.session_state.text_contents = None
 
-    # Document processing
-    if uploaded_doc:
-        pages=document_loader(uploaded_doc)
-        text_splitter=split_text()
-        chunks=create_chunks(pages,text_splitter)
-        embeddings,text_contents=create_embeddings(chunks)
-        vector_store=create_vector_store(embeddings)
-        context=retrieval(vector_store, prompt, text_contents)
 
-        mode = st.selectbox("Choose analysis mode:", (
-            "SRS Analysis", "Research Paper", "GRC Document", "Whitepaper", "Project Report"))
+# Step 1: Ask for Mode Selection ONLY after file is uploaded
+if uploaded_doc and not st.session_state.mode_selected:
+    st.session_state.mode = st.selectbox("🎯 Choose analysis mode", (
+        "SRS Analysis", "Research Paper", "GRC Document", "Whitepaper", "Project Report"))
+    if st.session_state.mode:
+        st.success(f"Mode selected: {st.session_state.mode}")
+        st.session_state.mode_selected = True
+        
+        # Process document ONCE
+        pages = document_loader(uploaded_doc)
+        text_splitter = split_text()
+        chunks = create_chunks(pages, text_splitter)
+        embeddings, text_contents = create_embeddings(chunks)
+        vector_store = create_vector_store(embeddings)
+        
+        # Save in session
+        st.session_state.vector_store = vector_store
+        st.session_state.text_contents = text_contents
 
-        # Generate and display assistant response
-        if mode == "SRS Analysis":
-            response = chat_completion_SRS_Analysis(context, prompt)
-        elif mode == "Research Paper":
-            response = chat_completion_Research_Analysis(context, prompt)
-        elif mode == "GRC Document":
-            chat_completion_GRC_Analysis(context, prompt)
-        elif mode == "Whitepaper":
-            chat_completion_Whitepaper_Analysis(context, prompt)
-        elif mode == "Project Report":
-            chat_completion_project_report_Analysis(context, prompt)
+# Step 2: Chat ONLY if mode is selected and doc is processed
+if st.session_state.mode_selected and st.session_state.vector_store:
+    user_input = st.chat_input("Ask me anything about the document 💬")
 
-        with st.chat_message("assistant"):
-            st.markdown(response)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+    if user_input:
+        with st.chat_message("user"):
+            st.markdown(user_input)
+
+        context = retrieval(
+            st.session_state.vector_store, user_input, st.session_state.text_contents)
+
+        if st.session_state.mode == "SRS Analysis":
+            chat_completion_SRS_Analysis(context, user_input)
+        elif st.session_state.mode == "Research Paper":
+            chat_completion_Research_Analysis(context, user_input)
+        elif st.session_state.mode == "GRC Document":
+            chat_completion_GRC_Analysis(context, user_input)
+        elif st.session_state.mode == "Whitepaper":
+            chat_completion_Whitepaper_Analysis(context, user_input)
+        elif st.session_state.mode == "Project Report":
+            chat_completion_project_report_Analysis(context, user_input)
+
+
+
+
