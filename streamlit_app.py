@@ -1,4 +1,4 @@
-#Importing necessary modules
+# Importing necessary modules
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
@@ -6,12 +6,9 @@ import faiss
 from groq import Groq
 import pypdf
 import streamlit as st
-import random
-import time
 import tempfile
 
 embedding_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
-
 
 # Get API key from Streamlit secrets
 Grok_Api_Key = st.secrets["GROQ_API_KEY"]
@@ -19,7 +16,6 @@ client = Groq(api_key=Grok_Api_Key)
 
 
 def document_loader(document):
-    # Save the uploaded file temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
         tmp_file.write(document.read())
         tmp_path = tmp_file.name
@@ -28,19 +24,11 @@ def document_loader(document):
     return pages
 
 def split_text():
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len,
-    )
-    return text_splitter
+    return RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200, length_function=len)
 
-def create_chunks(pages,text_splitter):
-    all_page_text = ""
-    for page in pages:
-        all_page_text += page.page_content
-    texts = text_splitter.create_documents([all_page_text])
-    return texts
+def create_chunks(pages, text_splitter):
+    all_text = "".join([page.page_content for page in pages])
+    return text_splitter.create_documents([all_text])
 
 def create_embeddings(chunks):
     text_contents = [doc.page_content for doc in chunks]
@@ -58,36 +46,32 @@ def retrieval(index, user_prompt, text_contents):
     k = 6
     distances, indices = index.search(query_embedding, k)
     retrieved_info = [text_contents[idx] for idx in indices[0]]
-    context = "\\n".join(retrieved_info)
-    return context
+    return "\n".join(retrieved_info)
+
+# --- Chat Completion Modes ---
 
 def chat_completion_SRS_Analysis(context, user_input):
     prompt = f"""
 You are acting as a senior software analyst specializing in software requirements specification (SRS) documents.
 
 Your task is to analyze the uploaded SRS document and help users by:
-1. Listing **functional** and **non-functional** requirements.
-2. Extracting **modules**, **user roles**, **data flows**.
-3. Explaining **technical terms** or acronyms.
-4. Pointing out **incomplete or ambiguous** parts.
-5. Summarizing the **scope and objective**.
+1. Listing functional and non-functional requirements.
+2. Extracting modules, user roles, data flows.
+3. Explaining technical terms or acronyms.
+4. Pointing out incomplete or ambiguous parts.
+5. Summarizing the scope and objective.
 6. Offering implementation or testing advice.
 
-Only refer to the document context. Do not assume or invent.
+Only answer relevant questions. Do not assume or invent.
 
-Only answer the relevant questions like for example if a user asks to list functional requirements then list only functional requirements.
-
-**Document Context:**
+Document Context:
 {context}
 """
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_input}
-        ],
+    response = client.chat.completions.create(
+        messages=[{"role": "system", "content": prompt}, {"role": "user", "content": user_input}],
         model="llama-3.3-70b-versatile",
     )
-    st.write(chat_completion.choices[0].message.content)
+    st.write(response.choices[0].message.content)
 
 def chat_completion_Research_Analysis(context, user_input):
     prompt = f"""
@@ -99,43 +83,33 @@ You must be able to:
 - Point out assumptions or gaps
 - Summarize conclusions and future work
 
-Only answer the relevant questions like for example if a user asks to explain a term or an abbrevation just do that only.
-
 Use only this context:
 {context}
 """
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_input}
-        ],
+    response = client.chat.completions.create(
+        messages=[{"role": "system", "content": prompt}, {"role": "user", "content": user_input}],
         model="llama-3.3-70b-versatile",
     )
-    st.write(chat_completion.choices[0].message.content)
+    st.write(response.choices[0].message.content)
 
 def chat_completion_GRC_Analysis(context, user_input):
     prompt = f"""
 You are a compliance specialist analyzing legal or regulatory documents.
 
-You shpuld be able to extract and explain:
+You should be able to extract and explain:
 - Responsibilities, restrictions
 - Key terms, penalties
 - Risks or ambiguities
 - Practical advice
 
-Only answer the relevant questions like for example if a user asks about risks then only state that.
-
-Only use this context:
+Use only this context:
 {context}
 """
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_input}
-        ],
+    response = client.chat.completions.create(
+        messages=[{"role": "system", "content": prompt}, {"role": "user", "content": user_input}],
         model="llama-3.3-70b-versatile",
     )
-    st.write(chat_completion.choices[0].message.content)
+    st.write(response.choices[0].message.content)
 
 def chat_completion_Whitepaper_Analysis(context, user_input):
     prompt = f"""
@@ -147,19 +121,14 @@ You should be able to summarize:
 - Financial models or tokens
 - Adoption or roadmap
 
-Only answer the relevant questions like for example if a user wants a roadmap then provide only that.
-
-Stick to context:
+Use only this context:
 {context}
 """
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_input}
-        ],
+    response = client.chat.completions.create(
+        messages=[{"role": "system", "content": prompt}, {"role": "user", "content": user_input}],
         model="llama-3.3-70b-versatile",
     )
-    st.write(chat_completion.choices[0].message.content)
+    st.write(response.choices[0].message.content)
 
 def chat_completion_project_report_Analysis(context, user_input):
     prompt = f"""
@@ -171,59 +140,56 @@ You should be able to summarize:
 - Timeline and assignments
 - Improvement recommendations
 
-Only answer the relevant questions like for example if a user asks to state the timeline then only do that.
-
-Context:
+Use only this context:
 {context}
 """
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_input}
-        ],
+    response = client.chat.completions.create(
+        messages=[{"role": "system", "content": prompt}, {"role": "user", "content": user_input}],
         model="llama-3.3-70b-versatile",
     )
-    st.write(chat_completion.choices[0].message.content)
+    st.write(response.choices[0].message.content)
 
 
-# Title
+# Streamlit App Layout
 st.title("📄 DeepDocx - Your Intelligent Document Analyzer")
 
-# File Upload
+# Upload
 uploaded_doc = st.file_uploader("📤 Upload your document", type=["pdf", "docx", "txt"])
 
-
-# Persist session state
+# Session state
+if "mode" not in st.session_state:
+    st.session_state.mode = ""
 if "mode_selected" not in st.session_state:
     st.session_state.mode_selected = False
-if "mode" not in st.session_state:
-    st.session_state.mode = None
 if "vector_store" not in st.session_state:
     st.session_state.vector_store = None
 if "text_contents" not in st.session_state:
     st.session_state.text_contents = None
 
+# Step 1: Mode Selection
+if uploaded_doc:
+    if not st.session_state.mode_selected:
+        selected_mode = st.selectbox("🎯 Choose analysis mode", (
+            "SRS Analysis", "Research Paper", "GRC Document", "Whitepaper", "Project Report"))
 
-# Step 1: Ask for Mode Selection ONLY after file is uploaded
-if uploaded_doc and not st.session_state.mode_selected:
-    st.session_state.mode = st.selectbox("🎯 Choose analysis mode", (
-        "SRS Analysis", "Research Paper", "GRC Document", "Whitepaper", "Project Report"))
-    if st.session_state.mode:
-        st.success(f"Mode selected: {st.session_state.mode}")
-        st.session_state.mode_selected = True
-        
-        # Process document ONCE
-        pages = document_loader(uploaded_doc)
-        text_splitter = split_text()
-        chunks = create_chunks(pages, text_splitter)
-        embeddings, text_contents = create_embeddings(chunks)
-        vector_store = create_vector_store(embeddings)
-        
-        # Save in session
-        st.session_state.vector_store = vector_store
-        st.session_state.text_contents = text_contents
+        if st.button("✅ Confirm Mode"):
+            st.session_state.mode = selected_mode
+            st.session_state.mode_selected = True
+            st.rerun()
 
-# Step 2: Chat ONLY if mode is selected and doc is processed
+# Step 2: Process Document Once After Mode Selection
+if uploaded_doc and st.session_state.mode_selected and st.session_state.vector_store is None:
+    st.success(f"Mode selected: {st.session_state.mode}")
+    pages = document_loader(uploaded_doc)
+    text_splitter = split_text()
+    chunks = create_chunks(pages, text_splitter)
+    embeddings, text_contents = create_embeddings(chunks)
+    vector_store = create_vector_store(embeddings)
+
+    st.session_state.vector_store = vector_store
+    st.session_state.text_contents = text_contents
+
+# Step 3: Ask Questions
 if st.session_state.mode_selected and st.session_state.vector_store:
     user_input = st.chat_input("Ask me anything about the document 💬")
 
@@ -231,19 +197,20 @@ if st.session_state.mode_selected and st.session_state.vector_store:
         with st.chat_message("user"):
             st.markdown(user_input)
 
-        context = retrieval(
-            st.session_state.vector_store, user_input, st.session_state.text_contents)
+        context = retrieval(st.session_state.vector_store, user_input, st.session_state.text_contents)
 
-        if st.session_state.mode == "SRS Analysis":
+        mode = st.session_state.mode
+        if mode == "SRS Analysis":
             chat_completion_SRS_Analysis(context, user_input)
-        elif st.session_state.mode == "Research Paper":
+        elif mode == "Research Paper":
             chat_completion_Research_Analysis(context, user_input)
-        elif st.session_state.mode == "GRC Document":
+        elif mode == "GRC Document":
             chat_completion_GRC_Analysis(context, user_input)
-        elif st.session_state.mode == "Whitepaper":
+        elif mode == "Whitepaper":
             chat_completion_Whitepaper_Analysis(context, user_input)
-        elif st.session_state.mode == "Project Report":
+        elif mode == "Project Report":
             chat_completion_project_report_Analysis(context, user_input)
+
 
 
 
