@@ -83,9 +83,13 @@ cd deepdocx
 pip install -r requirements.txt
 
 Create a .streamlit/secrets.toml file and add your Groq API key:
+
+```bash
 GROQ_API_KEY = "your_groq_api_key_here"
 
 Then launch the app:
+
+```bash
 streamlit run app.py
 
 ## 📁 Example Use Cases
