@@ -82,42 +82,16 @@ git clone https://github.com/yourusername/deepdocx.git
 cd deepdocx
 pip install -r requirements.txt
 
-Create a .streamlit/secrets.toml file and add your Groq API key:
+## 🔐 Setting Up Secrets
 
-```bash
+Create a `.streamlit/secrets.toml` file and add your Groq API key like this:
+
+```toml
 GROQ_API_KEY = "your_groq_api_key_here"
+
 
 Then launch the app:
 
-```bash
 streamlit run app.py
 
-## 📁 Example Use Cases
-
-🤖 Auto-analyze complex Software Requirement Specifications
-
-📚 Get quick summaries of academic papers
-
-📜 Deconstruct legal, compliance, or governance documents
-
-📈 Review whitepapers for projects or investments
-
-🧩 Audit and break down project reports across teams
-
-
-## 🧑‍💻 Ideal For
-
-Software Engineers & Architects
-
-Research Scholars & Students
-
-Product & Project Managers
-
-Legal, Compliance & Risk Officers
-
-Startup Founders & Investors
-
-
-## 📜 License
-MIT License ©Ayesha Noman
 
