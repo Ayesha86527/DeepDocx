@@ -69,8 +69,7 @@ Choose from 5 powerful modes based on your document type:
 
 ## 🚀 Try It Live
 
-📎 [Launch DeepDocx Now](https://your-public-url.com)  
-_(Replace with your deployed Streamlit URL)_
+📎 [Launch DeepDocx Now](https://deepdocx-e3lrtqh8nossgchrrd9v5o.streamlit.app/)  
 
 
 ## 🛠️ Local Installation
@@ -78,9 +77,19 @@ _(Replace with your deployed Streamlit URL)_
 Clone the repo and run locally:
 
 ```bash
-git clone https://github.com/yourusername/deepdocx.git
-cd deepdocx
+git clone https://github.com/Ayesha86527/DeepDocx.git
+cd DeepDocx
 pip install -r requirements.txt
+## 🔐 Setting Up Secrets
+
+Create a `.streamlit/secrets.toml` file and add your Groq API key like this:
+
+GROQ_API_KEY = "your_groq_api_key_here"
+
+Then launch the app:
+
+streamlit run app.py
+
 
 
 
