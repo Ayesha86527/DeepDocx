@@ -80,13 +80,12 @@ Clone the repo and run locally:
 git clone https://github.com/Ayesha86527/DeepDocx.git
 cd DeepDocx
 pip install -r requirements.txt
-## 🔐 Setting Up Secrets
 
-Create a `.streamlit/secrets.toml` file and add your Groq API key like this:
+# Create a `.streamlit/secrets.toml` file and add your Groq API key like this:
 
 GROQ_API_KEY = "your_groq_api_key_here"
 
-Then launch the app:
+# Then launch the app:
 
 streamlit run app.py
 
